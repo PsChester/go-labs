@@ -10,14 +10,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Kitty struct {
-	Name string `json:"Name"` //TODO:Question так мы указываем конкретный вид строки??
+type Order struct {
+	Id string `json:"id"` //TODO:Question почему с заглавно буквы?
+	Price int `json:"price"`
 }
 
 func Router() http.Handler {
 	router := mux.NewRouter()
 	subRouter := router.PathPrefix("/").Subrouter()
-	subRouter.HandleFunc("/kitty", getKitty).Methods(http.MethodGet)
+	subRouter.HandleFunc("/order", getOrder).Methods(http.MethodGet)
 	return logMiddleware(router)
 }
 
@@ -34,9 +35,9 @@ func logMiddleware(httpHandler http.Handler) http.Handler {
 	})
 }
 
-func getKitty(responseWriter http.ResponseWriter, _ *http.Request) {
-	cat := Kitty{"Кот"}
-	jsonAnswer, error := json.Marshal(cat)
+func getOrder(responseWriter http.ResponseWriter, _ *http.Request) {
+	order := Order{"11", 100}
+	jsonAnswer, error := json.Marshal(order)
 	if error != nil {
 		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
 		return
