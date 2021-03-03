@@ -3,9 +3,11 @@ package transport
 import (
 	"encoding/json"
 	"errors"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"io"
+	"io/ioutil" //TODO:Question можно ли сделать 1 иморт io??
 	"net/http"
 	"time"
 )
@@ -19,6 +21,7 @@ func Router() http.Handler {
 	router := mux.NewRouter()
 	subRouter := router.PathPrefix("/").Subrouter()
 	subRouter.HandleFunc("/order/{id}", getOrder).Methods(http.MethodGet)
+	subRouter.HandleFunc("/order_creating", createOrder).Methods(http.MethodPost)
 	return logMiddleware(router)
 }
 
@@ -75,6 +78,34 @@ func getOrder(responseWriter http.ResponseWriter, request *http.Request) {
 	responseWriter.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	responseWriter.WriteHeader(http.StatusOK)
 	//Переменные объявленные внутри if коротким образом, также доступны внутри else блоков
+	if _, error = io.WriteString(responseWriter, string(jsonAnswer)); error != nil {
+		log.WithField("error", error).Error("write response error")
+	}
+}
+
+func createOrder(responseWriter http.ResponseWriter, request *http.Request) {
+	log.WithField("check", "robit")
+	body, error := ioutil.ReadAll(request.Body)
+	if error != nil {
+		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer request.Body.Close()
+	var message Order
+	error = json.Unmarshal(body, &message)
+	if error != nil {
+		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
+		return
+	}
+	//TODO:проверка на пустоту body
+
+	orderId := uuid.New()
+	jsonAnswer, error := json.Marshal(orderId)
+	if error != nil {
+		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	if _, error = io.WriteString(responseWriter, string(jsonAnswer)); error != nil {
 		log.WithField("error", error).Error("write response error")
 	}

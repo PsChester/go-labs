@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	_ "github.com/go-sql-driver/mysql"
 	log "github.com/sirupsen/logrus"
 	"go-projects/pkg/orderservice/transport"
 	"net/http"
@@ -10,12 +12,32 @@ import (
 	"syscall"
 )
 
+//Транзакции
+//tx, error := db.Begin()
+//если ошибка -> log.Fatal(error)
+//defer tx.
+//tx.Query()
+//tx.Commit()
+//Нужно чистить память, напр: rows.Close() У структур, которые создаёшь сам, чистить не нужно
+//А вот сырые данные, которые приходят откуда-то, напр. из database или body в post-запросе, нужно подчистить
+
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 	file, err := os.OpenFile("orderservice.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666) //TODO:Question Как работает?
 	if err == nil {
 		log.SetOutput(file)
 		defer file.Close()
+	}
+
+	//Подключение базы данных
+	database, err := sql.Open("mysql", `root:root@/orderservice`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer database.Close()
+
+	if err := database.Ping(); err != nil {
+		log.Fatal(err)
 	}
 
 	serverUrl := ":8000"
