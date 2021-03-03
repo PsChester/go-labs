@@ -5,6 +5,7 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 	"time"
+	"errors"
 	"io"
 	"encoding/json"
 	log "github.com/sirupsen/logrus"
@@ -18,7 +19,7 @@ type Order struct {
 func Router() http.Handler {
 	router := mux.NewRouter()
 	subRouter := router.PathPrefix("/").Subrouter()
-	subRouter.HandleFunc("/order", getOrder).Methods(http.MethodGet)
+	subRouter.HandleFunc("/order/{id}", getOrder).Methods(http.MethodGet)
 	return logMiddleware(router)
 }
 
@@ -35,8 +36,37 @@ func logMiddleware(httpHandler http.Handler) http.Handler {
 	})
 }
 
-func getOrder(responseWriter http.ResponseWriter, _ *http.Request) {
-	order := Order{"11", 100}
+//Есть ли опциональный возврат? Order|nil
+func getOrderById(id string) (Order, error) {
+	orders := []Order{
+		{
+			Id: "11",
+			Price: 100,
+		},
+		{
+			Id: "12",
+			Price: 200,
+		},
+	}
+
+	for _, order := range orders {
+		if order.Id == id {
+			return order, nil
+		}
+	}
+
+	return Order{}, errors.New("Order don't found")
+}
+
+func getOrder(responseWriter http.ResponseWriter, request *http.Request) {
+	variables := mux.Vars(request)
+	id := variables["id"]
+	order, error := getOrderById(id)
+	if error != nil {
+		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	jsonAnswer, error := json.Marshal(order)
 	if error != nil {
 		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
