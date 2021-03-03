@@ -36,9 +36,16 @@ func logMiddleware(httpHandler http.Handler) http.Handler {
 
 func getKitty(responseWriter http.ResponseWriter, _ *http.Request) {
 	cat := Kitty{"Кот"}
-	b, _ := json.Marshal(cat)
+	jsonAnswer, error := json.Marshal(cat)
+	if error != nil {
+		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	responseWriter.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	responseWriter.WriteHeader(http.StatusOK)
-	io.WriteString(responseWriter, string(b))
+	//Переменные объявленные внутри if коротким образом, также доступны внутри else блоков
+	if _, error = io.WriteString(responseWriter, string(jsonAnswer)); error != nil {
+		log.WithField("error", error).Error("write response error")
+	}
 }

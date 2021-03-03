@@ -21,7 +21,7 @@ func main() {
 
 	serverUrl := ":8000"
 	log.WithFields(log.Fields{"url": serverUrl}).Info("starting the server")
-	killSignalChan := getKillSignalChan()
+	killSignalChan := getKillSignalChannel()
 	server := startServer(serverUrl)
 
 	waitForKillSignal(killSignalChan)
@@ -40,12 +40,13 @@ func startServer(serverUrl string) *http.Server {
 }
 
 //TODO:Question что за Chan??
-func getKillSignalChan() chan os.Signal{
+func getKillSignalChannel() chan os.Signal{
 	osKillSignalChan := make(chan os.Signal, 1)
 	signal.Notify(osKillSignalChan, os.Interrupt, syscall.SIGTERM)
 	return osKillSignalChan
 }
 
+//что за <-chan?
 func waitForKillSignal(killSignalChan <-chan os.Signal) {
 	killSignal := <-killSignalChan
 	switch killSignal {
