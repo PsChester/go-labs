@@ -8,12 +8,12 @@ import (
 	"os/signal"
 	"syscall"
 	"context"
+	log "github.com/sirupsen/logrus"
 )
-import log "github.com/sirupsen/logrus"
 
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
-	file, err := os.OpenFile("my.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)  ////TODO:Question Как работает?
+	file, err := os.OpenFile("my.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)  //TODO:Question Как работает?
 	if err == nil {
 		log.SetOutput(file)
 		defer file.Close()

@@ -1,17 +1,23 @@
 package transport
 
 import (
-	"fmt"
+//	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
 	"time"
+	"io"
+	"encoding/json"
+	log "github.com/sirupsen/logrus"
 )
-import log "github.com/sirupsen/logrus"
+
+type Kitty struct {
+	Name string `json:"Name"` //TODO:Question так мы указываем конкретный вид строки??
+}
 
 func Router() http.Handler {
 	router := mux.NewRouter()
-	subRouter := router.PathPrefix("/api/v1").Subrouter()
-	subRouter.HandleFunc("/hello-world", helloWorld).Methods(http.MethodGet)
+	subRouter := router.PathPrefix("/").Subrouter()
+	subRouter.HandleFunc("/kitty", getKitty).Methods(http.MethodGet)
 	return logMiddleware(router)
 }
 
@@ -28,6 +34,11 @@ func logMiddleware(httpHandler http.Handler) http.Handler {
 	})
 }
 
-func helloWorld(responseWriter http.ResponseWriter, _ *http.Request) {
-	fmt.Fprint(responseWriter, "Hello world")
+func getKitty(responseWriter http.ResponseWriter, _ *http.Request) {
+	cat := Kitty{"Кот"}
+	b, _ := json.Marshal(cat)
+
+	responseWriter.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	responseWriter.WriteHeader(http.StatusOK)
+	io.WriteString(responseWriter, string(b))
 }
