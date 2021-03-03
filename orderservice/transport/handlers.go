@@ -20,7 +20,7 @@ func logMiddleware(httpHandler http.Handler) http.Handler {
 		log.WithFields(log.Fields{
 			"method": request.Method,
 			"url": request.URL,
-			"remoteAddr": request.RemoteAddr,  //Что это?
+			"remoteAddr": request.RemoteAddr,  ////TODO:Question что это?
 			"userAgent": request.UserAgent(), //информация о названии и версии приложения (браузера), операционную систему компьютера и язык..
 			"time": time.Now(),
 		}).Info("got a new request")
