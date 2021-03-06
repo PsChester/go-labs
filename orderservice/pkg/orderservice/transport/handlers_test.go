@@ -11,20 +11,20 @@ import (
 //Answer тесты чтоб запустить: go test go-projects
 func TestList(test *testing.T) {
 	writer := httptest.NewRecorder()
-	list(writer, nil)
+	list(writer, nil) //TODO:Question, что за list?
 	response := writer.Result()
 	if response.StatusCode != http.StatusOK {
 		test.Errorf("Status code is wrong. Have %d, want: %d", response.StatusCode, http.StatusOK)
 	}
 
-	jsonString, error := ioutil.ReadAll(response.Body)
+	jsonString, err := ioutil.ReadAll(response.Body)
 	response.Body.Close()
-	if error != nil {
-		t.Fatal(error)
+	if err != nil {
+		test.Fatal(err)
 	}
 
 	items := make([]Order, 10)
-	if error = json.Unmarshal(jsonString, &items); error != nil {
-		t.Errorf("Can't parse json response with error %v", error)
+	if err = json.Unmarshal(jsonString, &items); err != nil {
+		test.Errorf("Can't parse json response with error %v", err)
 	}
 }

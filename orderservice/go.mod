@@ -1,4 +1,4 @@
-module go-projects
+module orderservice
 
 go 1.16
 
