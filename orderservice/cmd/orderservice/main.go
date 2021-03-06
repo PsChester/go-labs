@@ -21,8 +21,9 @@ import (
 //tx.Query()
 //tx.Commit()
 //Нужно чистить память, напр: rows.Close() У структур, которые создаёшь сам, чистить не нужно
-//А вот сырые данные, которые приходят откуда-то, напр. из database или body в post-запросе, нужно подчистить
+//А вот сырые данные, которые приходят откуда-то, напр. из database.mysql или body в post-запросе, нужно подчистить
 
+//TODO:Question как хранить миграции базы данных?
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 	file, err := os.OpenFile("../../orderservice.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666) //TODO:Question os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666?
