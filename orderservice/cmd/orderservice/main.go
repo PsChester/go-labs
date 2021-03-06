@@ -8,6 +8,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"orderservice/pkg/orderservice/model"
 	"orderservice/pkg/orderservice/transport"
 	"os"
 	"os/signal"
@@ -24,6 +25,7 @@ import (
 //А вот сырые данные, которые приходят откуда-то, напр. из database.mysql или body в post-запросе, нужно подчистить
 
 //TODO:Question как хранить миграции базы данных?
+//TODO:Question как обращаться к базе данных не объявля методы для типа OrderService
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 	file, err := os.OpenFile("../../orderservice.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666) //TODO:Question os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666?
@@ -44,7 +46,7 @@ func main() {
 	}
 
 	//TODO:мб объеденить с server и serverUrl
-	databaseServer := transport.Server{Database: database}
+	databaseServer := model.OrderService{Database: database}
 
 	serverUrl := ":8000"
 	log.WithFields(log.Fields{"url": serverUrl}).Info("starting the server")
@@ -55,7 +57,7 @@ func main() {
 	server.Shutdown(context.Background())
 }
 
-func startServer(serverUrl string, databaseServer transport.Server) *http.Server {
+func startServer(serverUrl string, databaseServer model.OrderService) *http.Server {
 	router := transport.Router(&databaseServer)              //http.Handler
 	server := &http.Server{Addr: serverUrl, Handler: router} ////TODO:Question какая разница между httpServer и http.ListenAndServe?
 

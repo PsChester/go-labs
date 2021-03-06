@@ -1,26 +1,20 @@
 package transport
 
 import (
-	"database/sql"
 	"encoding/json"
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
-	"io" //TODO:Question можно ли сделать 1 иморт io??
+	"io"
 	"net/http"
 	"orderservice/pkg/orderservice/model"
 	"time"
 )
 
-type Server struct {
-	Database *sql.DB
-}
-
-func Router(server *Server) http.Handler {
+func Router(orderService model.OrderServiceInterface) http.Handler {
 	router := mux.NewRouter()
 	subRouter := router.PathPrefix("/").Subrouter()
-	subRouter.HandleFunc("/orders", server.showOrders).Methods(http.MethodGet)
-	subRouter.HandleFunc("/order_creating", server.createOrder).Methods(http.MethodPost)
+	subRouter.HandleFunc("/get_orders", ShowOrders(orderService)).Methods(http.MethodPost)
+	subRouter.HandleFunc("/create_order", CreateOrder(orderService)).Methods(http.MethodPost)
 	return logMiddleware(router)
 }
 
@@ -37,71 +31,32 @@ func logMiddleware(httpHandler http.Handler) http.Handler {
 	})
 }
 
-//TODO:Question Есть ли опциональный возврат? Order|nil
-func (server *Server) createOrder(responseWriter http.ResponseWriter, request *http.Request) {
-	body, err := io.ReadAll(request.Body)
-	if err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer request.Body.Close()
+func ShowOrders(orderService model.OrderServiceInterface) func(http.ResponseWriter, *http.Request) {
+	return func(responseWriter http.ResponseWriter, request *http.Request) {
+		//Получение user_id
 
-	var message model.Order
-	err = json.Unmarshal(body, &message)
-	if err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	//TODO: проверка на пустоту body
-
-	orderId := uuid.New().String()
-	//TODO: вынести названия в константы, цену брать из body
-	query := "INSERT INTO orderservice.order (order_id, price) VALUES (?, ?)"
-	result, err := server.Database.Exec(query, orderId, 100)
-
-	if err != nil {
-		log.WithField("Database.Exec", "No added")
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	jsonAnswer, err := json.Marshal(result.LastInsertId)
-	if err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if _, err = io.WriteString(responseWriter, string(jsonAnswer)); err != nil {
-		log.WithField("err", err).Error("write response err")
+		//orderService.GetAllOrders()
 	}
 }
 
-func (server *Server) showOrders(responseWriter http.ResponseWriter, _ *http.Request) {
-	query := "SELECT * FROM orderservice.order"
-	rows, err := server.Database.Query(query)
-	if err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	orders := make([]model.Order, 0)
-	for rows.Next() {
-		order := model.Order{}
-		err = rows.Scan(&order.Id, &order.Price)
+func CreateOrder(orderService model.OrderServiceInterface) func(http.ResponseWriter, *http.Request) {
+	return func(responseWriter http.ResponseWriter, request *http.Request) {
+		body, err := io.ReadAll(request.Body)
 		if err != nil {
 			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		orders = append(orders, order)
-	}
+		defer request.Body.Close()
 
-	jsonAnswer, err := json.Marshal(orders)
-	if err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
-		return
-	}
+		//Достать id из объекта body, как типизировать?? Или есть метод, чтоб достать конкретное поле?
+		var message string
+		err = json.Unmarshal(body, &message)
+		if err != nil {
+			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		//TODO: проверка на пустоту body
 
-	if _, err = io.WriteString(responseWriter, string(jsonAnswer)); err != nil {
-		log.WithField("error", err).Error("write response err")
+		//orderService.CreateOrder()
 	}
 }
