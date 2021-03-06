@@ -3,12 +3,10 @@ package transport
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
-	"io"
-	"io/ioutil" //TODO:Question можно ли сделать 1 иморт io??
+	"io" //TODO:Question можно ли сделать 1 иморт io??
 	"net/http"
 	"time"
 )
@@ -26,7 +24,8 @@ type Order struct {
 func Router(server *Server) http.Handler {
 	router := mux.NewRouter()
 	subRouter := router.PathPrefix("/").Subrouter()
-	subRouter.HandleFunc("/order/{id}", getOrder).Methods(http.MethodGet)
+	//subRouter.HandleFunc("/order/{id}", getOrder).Methods(http.MethodGet)
+	subRouter.HandleFunc("/orders", server.showOrders).Methods(http.MethodGet)
 	subRouter.HandleFunc("/order_creating", server.createOrder).Methods(http.MethodPost)
 	return logMiddleware(router)
 }
@@ -45,62 +44,45 @@ func logMiddleware(httpHandler http.Handler) http.Handler {
 }
 
 //TODO:Question Есть ли опциональный возврат? Order|nil
-func getOrderById(id string) (Order, error) {
-	orders := []Order{
-		{
-			Id:    "11",
-			Price: 100,
-		},
-		{
-			Id:    "12",
-			Price: 200,
-		},
-	}
 
-	for _, order := range orders {
-		if order.Id == id {
-			return order, nil
-		}
-	}
-
-	return Order{}, errors.New("Order don't found")
-}
-
-func getOrder(responseWriter http.ResponseWriter, request *http.Request) {
-	variables := mux.Vars(request)
-	id := variables["id"]
-	order, error := getOrderById(id)
-	if error != nil {
-		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	jsonAnswer, error := json.Marshal(order)
-	if error != nil {
-		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	responseWriter.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	responseWriter.WriteHeader(http.StatusOK)
-	//Переменные объявленные внутри if коротким образом, также доступны внутри else блоков
-	if _, error = io.WriteString(responseWriter, string(jsonAnswer)); error != nil {
-		log.WithField("error", error).Error("write response error")
-	}
-}
+//Проходит по базе и показывает нужный заказ либо заглушку
+//func getOrder(responseWriter http.ResponseWriter, request *http.Request) {
+//	variables := mux.Vars(request)
+//	id := variables["id"]
+//
+//
+//
+//	if error != nil {
+//		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//
+//	jsonAnswer, error := json.Marshal(order)
+//	if error != nil {
+//		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//
+//	responseWriter.Header().Set("Content-Type", "application/json; charset=UTF-8")
+//	responseWriter.WriteHeader(http.StatusOK)
+//	//Переменные объявленные внутри if коротким образом, также доступны внутри else блоков
+//	if _, error = io.WriteString(responseWriter, string(jsonAnswer)); error != nil {
+//		log.WithField("error", error).Error("write response error")
+//	}
+//}
 
 func (server *Server) createOrder(responseWriter http.ResponseWriter, request *http.Request) {
-	body, error := ioutil.ReadAll(request.Body)
-	if error != nil {
-		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
+	body, err := io.ReadAll(request.Body)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer request.Body.Close()
 
 	var message Order
-	error = json.Unmarshal(body, &message)
-	if error != nil {
-		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
+	err = json.Unmarshal(body, &message)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	//TODO: проверка на пустоту body
@@ -108,25 +90,51 @@ func (server *Server) createOrder(responseWriter http.ResponseWriter, request *h
 	orderId := uuid.New().String()
 	//TODO: вынести названия в константы, цену брать из body
 	query := "INSERT INTO orderservice.order (order_id, price) VALUES (?, ?)"
-	result, error := server.Database.Exec(query, orderId, 100)
+	result, err := server.Database.Exec(query, orderId, 100)
 
-	if error != nil {
+	if err != nil {
 		log.WithField("Database.Exec", "No added")
-		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	jsonAnswer, error := json.Marshal(result.LastInsertId)
-	if error != nil {
-		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
+	jsonAnswer, err := json.Marshal(result.LastInsertId)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	log.WithField("Check", "5")
+	if _, err = io.WriteString(responseWriter, string(jsonAnswer)); err != nil {
+		log.WithField("err", err).Error("write response err")
+	}
+}
 
-	if _, error = io.WriteString(responseWriter, string(jsonAnswer)); error != nil {
-		log.WithField("error", error).Error("write response error")
+func (server *Server) showOrders(responseWriter http.ResponseWriter, _ *http.Request) {
+	query := "SELECT * FROM orderservice.order"
+	rows, err := server.Database.Query(query)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	log.WithField("Check", "6")
+	orders := make([]Order, 0)
+	for rows.Next() {
+		order := Order{}
+		err = rows.Scan(&order.Id, &order.Price)
+		if err != nil {
+			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		orders = append(orders, order)
+	}
+
+	jsonAnswer, err := json.Marshal(orders)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if _, err = io.WriteString(responseWriter, string(jsonAnswer)); err != nil {
+		log.WithField("error", err).Error("write response err")
+	}
 }
