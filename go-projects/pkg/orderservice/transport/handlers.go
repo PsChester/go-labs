@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"github.com/google/uuid"
@@ -12,16 +13,21 @@ import (
 	"time"
 )
 
+type Server struct {
+	Database *sql.DB
+}
+
+// Order Answer: название структур и их полей с заглавной буквы, чтобы их можно было использовать при экспорте.
 type Order struct {
-	Id    string `json:"id"` //TODO:Question почему с заглавно буквы?
+	Id    string `json:"id"`
 	Price int    `json:"price"`
 }
 
-func Router() http.Handler {
+func Router(server *Server) http.Handler {
 	router := mux.NewRouter()
 	subRouter := router.PathPrefix("/").Subrouter()
 	subRouter.HandleFunc("/order/{id}", getOrder).Methods(http.MethodGet)
-	subRouter.HandleFunc("/order_creating", createOrder).Methods(http.MethodPost)
+	subRouter.HandleFunc("/order_creating", server.createOrder).Methods(http.MethodPost)
 	return logMiddleware(router)
 }
 
@@ -31,14 +37,14 @@ func logMiddleware(httpHandler http.Handler) http.Handler {
 			"method":     request.Method,
 			"url":        request.URL,
 			"remoteAddr": request.RemoteAddr,  ////TODO:Question что это?
-			"userAgent":  request.UserAgent(), //информация о названии и версии приложения (браузера), операционную систему компьютера и язык..
+			"userAgent":  request.UserAgent(), //Answer: информация о названии и версии приложения (браузера), операционную систему компьютера и язык..
 			"time":       time.Now(),
 		}).Info("got a new request")
 		httpHandler.ServeHTTP(responseWriter, request)
 	})
 }
 
-//Есть ли опциональный возврат? Order|nil
+//TODO:Question Есть ли опциональный возврат? Order|nil
 func getOrderById(id string) (Order, error) {
 	orders := []Order{
 		{
@@ -83,30 +89,44 @@ func getOrder(responseWriter http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func createOrder(responseWriter http.ResponseWriter, request *http.Request) {
-	log.WithField("check", "robit")
+func (server *Server) createOrder(responseWriter http.ResponseWriter, request *http.Request) {
 	body, error := ioutil.ReadAll(request.Body)
 	if error != nil {
 		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer request.Body.Close()
+
 	var message Order
 	error = json.Unmarshal(body, &message)
 	if error != nil {
 		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
 		return
 	}
-	//TODO:проверка на пустоту body
+	//TODO: проверка на пустоту body
 
-	orderId := uuid.New()
-	jsonAnswer, error := json.Marshal(orderId)
+	orderId := uuid.New().String()
+	//TODO: вынести названия в константы, цену брать из body
+	query := "INSERT INTO orderservice.order (order_id, price) VALUES (?, ?)"
+	result, error := server.Database.Exec(query, orderId, 100)
+
+	if error != nil {
+		log.WithField("Database.Exec", "No added")
+		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	jsonAnswer, error := json.Marshal(result.LastInsertId)
 	if error != nil {
 		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	log.WithField("Check", "5")
+
 	if _, error = io.WriteString(responseWriter, string(jsonAnswer)); error != nil {
 		log.WithField("error", error).Error("write response error")
 	}
+
+	log.WithField("Check", "6")
 }

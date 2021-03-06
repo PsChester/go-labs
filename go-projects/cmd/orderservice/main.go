@@ -1,5 +1,7 @@
 package main
 
+//TODO:Question как настроить создание исполняемых файлов в bin?
+
 import (
 	"context"
 	"database/sql"
@@ -23,7 +25,7 @@ import (
 
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
-	file, err := os.OpenFile("orderservice.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666) //TODO:Question Как работает?
+	file, err := os.OpenFile("orderservice.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666) //TODO:Question os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666?
 	if err == nil {
 		log.SetOutput(file)
 		defer file.Close()
@@ -40,27 +42,30 @@ func main() {
 		log.Fatal(err)
 	}
 
+	//TODO:мб объеденить с server и serverUrl
+	databaseServer := transport.Server{Database: database}
+
 	serverUrl := ":8000"
 	log.WithFields(log.Fields{"url": serverUrl}).Info("starting the server")
 	killSignalChan := getKillSignalChannel()
-	server := startServer(serverUrl)
+	server := startServer(serverUrl, databaseServer)
 
 	waitForKillSignal(killSignalChan)
 	server.Shutdown(context.Background())
 }
 
-func startServer(serverUrl string) *http.Server {
-	router := transport.Router()                             //http.Handler
+func startServer(serverUrl string, databaseServer transport.Server) *http.Server {
+	router := transport.Router(&databaseServer)              //http.Handler
 	server := &http.Server{Addr: serverUrl, Handler: router} ////TODO:Question какая разница между httpServer и http.ListenAndServe?
 
-	go func() { //TODO:Question что за go func??
+	go func() { //Answer go func - это goroutine, функция выполняющая ассинхронно
 		log.Fatal(server.ListenAndServe())
 	}()
 
 	return server
 }
 
-//TODO:Question что за Chan??
+//Answer: сhan - тип называемый "канал" (channel) по сути обычная очередь //TODO:Question или я ошибаюсь?
 func getKillSignalChannel() chan os.Signal {
 	osKillSignalChan := make(chan os.Signal, 1)
 	signal.Notify(osKillSignalChan, os.Interrupt, syscall.SIGTERM)

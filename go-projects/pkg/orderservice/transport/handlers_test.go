@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-//TODO:Answer чтоб запустить: go test go-projects
+//Answer тесты чтоб запустить: go test go-projects
 func TestList(test *testing.T) {
 	writer := httptest.NewRecorder()
 	list(writer, nil)
