@@ -24,7 +24,6 @@ type Order struct {
 func Router(server *Server) http.Handler {
 	router := mux.NewRouter()
 	subRouter := router.PathPrefix("/").Subrouter()
-	//subRouter.HandleFunc("/order/{id}", getOrder).Methods(http.MethodGet)
 	subRouter.HandleFunc("/orders", server.showOrders).Methods(http.MethodGet)
 	subRouter.HandleFunc("/order_creating", server.createOrder).Methods(http.MethodPost)
 	return logMiddleware(router)
@@ -44,33 +43,6 @@ func logMiddleware(httpHandler http.Handler) http.Handler {
 }
 
 //TODO:Question Есть ли опциональный возврат? Order|nil
-
-//Проходит по базе и показывает нужный заказ либо заглушку
-//func getOrder(responseWriter http.ResponseWriter, request *http.Request) {
-//	variables := mux.Vars(request)
-//	id := variables["id"]
-//
-//
-//
-//	if error != nil {
-//		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
-//		return
-//	}
-//
-//	jsonAnswer, error := json.Marshal(order)
-//	if error != nil {
-//		http.Error(responseWriter, error.Error(), http.StatusInternalServerError)
-//		return
-//	}
-//
-//	responseWriter.Header().Set("Content-Type", "application/json; charset=UTF-8")
-//	responseWriter.WriteHeader(http.StatusOK)
-//	//Переменные объявленные внутри if коротким образом, также доступны внутри else блоков
-//	if _, error = io.WriteString(responseWriter, string(jsonAnswer)); error != nil {
-//		log.WithField("error", error).Error("write response error")
-//	}
-//}
-
 func (server *Server) createOrder(responseWriter http.ResponseWriter, request *http.Request) {
 	body, err := io.ReadAll(request.Body)
 	if err != nil {
