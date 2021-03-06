@@ -8,17 +8,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"io" //TODO:Question можно ли сделать 1 иморт io??
 	"net/http"
+	"orderservice/pkg/orderservice/model"
 	"time"
 )
 
 type Server struct {
 	Database *sql.DB
-}
-
-// Order Answer: название структур и их полей с заглавной буквы, чтобы их можно было использовать при экспорте.
-type Order struct {
-	Id    string `json:"id"`
-	Price int    `json:"price"`
 }
 
 func Router(server *Server) http.Handler {
@@ -51,7 +46,7 @@ func (server *Server) createOrder(responseWriter http.ResponseWriter, request *h
 	}
 	defer request.Body.Close()
 
-	var message Order
+	var message model.Order
 	err = json.Unmarshal(body, &message)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
@@ -89,9 +84,9 @@ func (server *Server) showOrders(responseWriter http.ResponseWriter, _ *http.Req
 		return
 	}
 
-	orders := make([]Order, 0)
+	orders := make([]model.Order, 0)
 	for rows.Next() {
-		order := Order{}
+		order := model.Order{}
 		err = rows.Scan(&order.Id, &order.Price)
 		if err != nil {
 			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
