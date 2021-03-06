@@ -25,7 +25,7 @@ import (
 
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
-	file, err := os.OpenFile("orderservice.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666) //TODO:Question os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666?
+	file, err := os.OpenFile("../../orderservice.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666) //TODO:Question os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666?
 	if err == nil {
 		log.SetOutput(file)
 		defer file.Close()
@@ -65,7 +65,7 @@ func startServer(serverUrl string, databaseServer transport.Server) *http.Server
 	return server
 }
 
-//Answer: сhan - тип называемый "канал" (channel) по сути обычная очередь //TODO:Question или я ошибаюсь?
+//Answer: сhan - тип называемый "канал" (channel). По сути обычная очередь //TODO:Question или я ошибаюсь?
 func getKillSignalChannel() chan os.Signal {
 	osKillSignalChan := make(chan os.Signal, 1)
 	signal.Notify(osKillSignalChan, os.Interrupt, syscall.SIGTERM)
