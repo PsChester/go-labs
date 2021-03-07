@@ -60,7 +60,7 @@ func (orderService *OrderService) CreateOrder(userId int, productIds *[]int) err
 }
 
 func (orderService *OrderService) GetAllOrders(userId int) ([]Order, error) {
-	query := "SELECT order_id, created_date FROM orderservice.`order` WHERE user_id = ?"
+	query := "SELECT order_id FROM orderservice.`order` WHERE user_id = ?"
 	rows, err := orderService.Database.Query(query, userId)
 	if err != nil {
 		return nil, err
@@ -69,50 +69,16 @@ func (orderService *OrderService) GetAllOrders(userId int) ([]Order, error) {
 
 	orders := make([]Order, 0)
 	for rows.Next() {
-		var order Order
-		err = rows.Scan(&order.Id, &order.CreatedDate)
+		var orderId string
+		err = rows.Scan(&orderId)
+		if err != nil {
+			return nil, err
+		}
+		order, err := orderService.GetOrder(orderId)
 		if err != nil {
 			return nil, err
 		}
 		orders = append(orders, order)
-	}
-
-	for orderIndex, order := range orders {
-		query = "SELECT product_id FROM orderservice.product_in_order WHERE order_id = ?"
-		rows, err = orderService.Database.Query(query, order.Id)
-		if err != nil {
-			return nil, err
-		}
-
-		productIds := make([]string, 0)
-		for rows.Next() {
-			var productId string
-			err = rows.Scan(&productId)
-			if err != nil {
-				return nil, err
-			}
-			productIds = append(productIds, productId)
-		}
-
-		orderProducts := make([]Product, 0)
-		for _, productId := range productIds {
-			query = "SELECT * FROM orderservice.product WHERE product_id = ?"
-			rows, err = orderService.Database.Query(query, productId)
-			if err != nil {
-				return nil, err
-			}
-
-			for rows.Next() {
-				var product Product
-				err = rows.Scan(&product.Id, &product.Name, &product.Price)
-				if err != nil {
-					return nil, err
-				}
-				orderProducts = append(orderProducts, product)
-			}
-		}
-
-		orders[orderIndex].Products = orderProducts
 	}
 
 	return orders, nil
