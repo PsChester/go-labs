@@ -14,3 +14,11 @@ Content-Type: application/json
 {
   "user_id": 1
 }
+
+###
+POST http://localhost:8000/get_order
+Content-Type: application/json
+
+{
+  "order_id": "df766840-8f70-4fff-bce2-427b7e1a7678"
+}

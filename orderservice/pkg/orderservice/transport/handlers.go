@@ -20,9 +20,14 @@ type ShowOrdersRequestBody struct {
 	UserId int `json:"user_id"`
 }
 
+type ShowOrderInfoRequestBody struct {
+	OrderId string `json:"order_id"`
+}
+
 func Router(orderService model.OrderServiceInterface) http.Handler {
 	router := mux.NewRouter()
 	subRouter := router.PathPrefix("/").Subrouter()
+	subRouter.HandleFunc("/get_order", ShowOrderInfo(orderService)).Methods(http.MethodPost)
 	subRouter.HandleFunc("/get_orders", ShowOrders(orderService)).Methods(http.MethodPost)
 	subRouter.HandleFunc("/create_order", CreateOrder(orderService)).Methods(http.MethodPost)
 	return logMiddleware(router)
@@ -39,6 +44,38 @@ func logMiddleware(httpHandler http.Handler) http.Handler {
 		}).Info("got a new request")
 		httpHandler.ServeHTTP(responseWriter, request)
 	})
+}
+
+func ShowOrderInfo(orderService model.OrderServiceInterface) func(http.ResponseWriter, *http.Request) {
+	return func(responseWriter http.ResponseWriter, request *http.Request) {
+		body, err := io.ReadAll(request.Body)
+		if err != nil {
+			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer request.Body.Close()
+
+		var message ShowOrderInfoRequestBody
+		err = json.Unmarshal(body, &message)
+		if err != nil {
+			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		order, err := orderService.GetOrder(message.OrderId)
+		if err != nil {
+			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		}
+
+		jsonAnswer, err := json.Marshal(order)
+		if err != nil {
+			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		}
+
+		if _, err = io.WriteString(responseWriter, string(jsonAnswer)); err != nil {
+			log.WithField("getOrderInfo", "failed")
+		}
+	}
 }
 
 func ShowOrders(orderService model.OrderServiceInterface) func(http.ResponseWriter, *http.Request) {

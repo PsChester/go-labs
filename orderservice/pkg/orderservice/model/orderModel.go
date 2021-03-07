@@ -122,7 +122,49 @@ func (orderService *OrderService) CancelOrder(orderId string) error {
 	panic("implement me")
 }
 func (orderService *OrderService) GetOrder(orderId string) (Order, error) {
-	panic("implement me")
+	query := "SELECT created_date FROM orderservice.`order` WHERE order_id = ?"
+	var order Order
+	err := orderService.Database.QueryRow(query, orderId).Scan(&order.CreatedDate)
+	if err != nil {
+		return Order{}, err
+	}
+	order.Id = orderId
+
+	query = "SELECT product_id FROM orderservice.product_in_order WHERE order_id = ?"
+	rows, err := orderService.Database.Query(query, order.Id)
+	if err != nil {
+		return Order{}, err
+	}
+
+	productIds := make([]string, 0)
+	for rows.Next() {
+		var productId string
+		err = rows.Scan(&productId)
+		if err != nil {
+			return Order{}, err
+		}
+		productIds = append(productIds, productId)
+	}
+
+	order.Products = make([]Product, 0)
+	for _, productId := range productIds {
+		query = "SELECT * FROM orderservice.product WHERE product_id = ?"
+		rows, err = orderService.Database.Query(query, productId)
+		if err != nil {
+			return Order{}, err
+		}
+
+		for rows.Next() {
+			var product Product
+			err = rows.Scan(&product.Id, &product.Name, &product.Price)
+			if err != nil {
+				return Order{}, err
+			}
+			order.Products = append(order.Products, product)
+		}
+	}
+
+	return order, nil
 }
 
 func (orderService *OrderService) UpdateOrder(orderId string, productIds *[]int) error {
