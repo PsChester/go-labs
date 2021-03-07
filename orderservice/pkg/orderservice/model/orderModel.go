@@ -24,16 +24,19 @@ type Product struct {
 	Price int    `json:"price"`
 }
 
+//TODO:Question норм ли использовать Int для id-шников, которые в базе данных инкрементируются
 type OrderServiceInterface interface {
-	CreateOrder(userId string, products []Product) error
+	CreateOrder(userId int, productIds *[]int) error
 	CancelOrder(orderId string) error
 	GetOrder(orderId string) (Order, error)
-	UpdateOrder(orderId string, products []Product) error
-	GetAllOrders(userId string) ([]Order, error)
+	UpdateOrder(orderId string, productIds *[]int) error
+	GetAllOrders(userId int) ([]Order, error)
 }
 
 //TODO:Question Есть ли опциональный возврат? Order|nil
-func (orderService *OrderService) CreateOrder(userId string, products []Product) error {
+func (orderService *OrderService) CreateOrder(userId int, productIds *[]int) error {
+	//Тут должна быть проверка существования пользователя и продуктов
+
 	orderId := uuid.New().String()
 	query := "INSERT INTO orderservice.`order` (order_id, user_id, created_date) VALUES (?, ?, ?)"
 
@@ -44,9 +47,9 @@ func (orderService *OrderService) CreateOrder(userId string, products []Product)
 		return err
 	}
 
-	for _, product := range products {
+	for _, productId := range *productIds {
 		query = "INSERT INTO orderservice.product_in_order (product_id, order_id) VALUES (?, ?)"
-		_, err := orderService.Database.Query(query, product.Id, orderId)
+		_, err := orderService.Database.Query(query, productId, orderId)
 		if err != nil {
 			log.WithField("create_order", "failed")
 			return err
@@ -56,7 +59,7 @@ func (orderService *OrderService) CreateOrder(userId string, products []Product)
 	return nil
 }
 
-func (orderService *OrderService) GetAllOrders(userId string) ([]Order, error) {
+func (orderService *OrderService) GetAllOrders(userId int) ([]Order, error) {
 	panic("implement me")
 	//1. Запросить все заказы из таблицы order с соответсвующим user_id
 	//2. В цикле для каждого заказа запросить из бд список продуктов
@@ -70,6 +73,6 @@ func (orderService *OrderService) GetOrder(orderId string) (Order, error) {
 	panic("implement me")
 }
 
-func (orderService *OrderService) UpdateOrder(orderId string, products []Product) error {
+func (orderService *OrderService) UpdateOrder(orderId string, productIds *[]int) error {
 	panic("implement me")
 }

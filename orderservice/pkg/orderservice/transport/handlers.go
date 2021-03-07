@@ -2,6 +2,7 @@ package transport
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"io"
@@ -9,6 +10,12 @@ import (
 	"orderservice/pkg/orderservice/model"
 	"time"
 )
+
+//TODO:Question можно ли считать данные из тела запроса, не создавая дополнительную структуру?
+type CreateOrderRequestBody struct {
+	UserId     int   `json:"user_id"`
+	ProductIds []int `json:"product_ids"`
+}
 
 func Router(orderService model.OrderServiceInterface) http.Handler {
 	router := mux.NewRouter()
@@ -48,15 +55,18 @@ func CreateOrder(orderService model.OrderServiceInterface) func(http.ResponseWri
 		}
 		defer request.Body.Close()
 
-		//Достать id из объекта body, как типизировать?? Или есть метод, чтоб достать конкретное поле?
-		var message string
+		var message CreateOrderRequestBody
 		err = json.Unmarshal(body, &message)
 		if err != nil {
 			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		//TODO: проверка на пустоту body
 
-		//orderService.CreateOrder()
+		fmt.Println(message.UserId, message.ProductIds, body)
+
+		err = orderService.CreateOrder(message.UserId, &message.ProductIds)
+		if err != nil {
+			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		}
 	}
 }

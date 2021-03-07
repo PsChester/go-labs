@@ -1,11 +1,7 @@
-POST http://localhost:8000/order_creating
+POST http://localhost:8000/create_order
 Content-Type: application/json
 
 {
-  "menuItems": [
-    {
-      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "quantity": 0
-    }
-  ]
+  "user_id": 1,
+  "product_ids": [1, 2, 3]
 }
