@@ -24,9 +24,14 @@ type ShowOrderInfoRequestBody struct {
 	OrderId string `json:"order_id"`
 }
 
+type CancelOrderRequestBody struct {
+	OrderId string `json:"order_id"`
+}
+
 func Router(orderService model.OrderServiceInterface) http.Handler {
 	router := mux.NewRouter()
 	subRouter := router.PathPrefix("/").Subrouter()
+	subRouter.HandleFunc("/cancel_order", CancelOrder(orderService)).Methods(http.MethodPost)
 	subRouter.HandleFunc("/get_order", ShowOrderInfo(orderService)).Methods(http.MethodPost)
 	subRouter.HandleFunc("/get_orders", ShowOrders(orderService)).Methods(http.MethodPost)
 	subRouter.HandleFunc("/create_order", CreateOrder(orderService)).Methods(http.MethodPost)
@@ -127,6 +132,31 @@ func CreateOrder(orderService model.OrderServiceInterface) func(http.ResponseWri
 		}
 
 		err = orderService.CreateOrder(message.UserId, &message.ProductIds)
+		if err != nil {
+			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		}
+	}
+}
+
+func CancelOrder(orderService model.OrderServiceInterface) func(http.ResponseWriter, *http.Request) {
+	return func(responseWriter http.ResponseWriter, request *http.Request) {
+		body, err := io.ReadAll(request.Body)
+		if err != nil {
+			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer request.Body.Close()
+
+		var message CancelOrderRequestBody
+		err = json.Unmarshal(body, &message)
+		if err != nil {
+			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		//TODO: проверка прав пользователя на отмену заказа
+
+		err = orderService.CancelOrder(message.OrderId)
 		if err != nil {
 			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		}

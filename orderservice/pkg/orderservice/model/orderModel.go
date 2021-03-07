@@ -47,16 +47,7 @@ func (orderService *OrderService) CreateOrder(userId int, productIds *[]int) err
 		return err
 	}
 
-	for _, productId := range *productIds {
-		query = "INSERT INTO orderservice.product_in_order (product_id, order_id) VALUES (?, ?)"
-		_, err := orderService.Database.Query(query, productId, orderId)
-		if err != nil {
-			log.WithField("create_order", "failed")
-			return err
-		}
-	}
-
-	return nil
+	return orderService.setOrderProducts(orderId, productIds)
 }
 
 func (orderService *OrderService) GetAllOrders(userId int) ([]Order, error) {
@@ -85,7 +76,14 @@ func (orderService *OrderService) GetAllOrders(userId int) ([]Order, error) {
 }
 
 func (orderService *OrderService) CancelOrder(orderId string) error {
-	panic("implement me")
+	query := "DELETE FROM orderservice.`product_in_order` WHERE order_id = ?"
+	_, err := orderService.Database.Exec(query, orderId)
+	if err != nil {
+		return err
+	}
+	query = "DELETE FROM orderservice.`order` WHERE order_id = ?"
+	_, err = orderService.Database.Exec(query, orderId)
+	return err
 }
 func (orderService *OrderService) GetOrder(orderId string) (Order, error) {
 	query := "SELECT created_date FROM orderservice.`order` WHERE order_id = ?"
@@ -102,9 +100,9 @@ func (orderService *OrderService) GetOrder(orderId string) (Order, error) {
 		return Order{}, err
 	}
 
-	productIds := make([]string, 0)
+	productIds := make([]int, 0)
 	for rows.Next() {
-		var productId string
+		var productId int
 		err = rows.Scan(&productId)
 		if err != nil {
 			return Order{}, err
@@ -112,27 +110,53 @@ func (orderService *OrderService) GetOrder(orderId string) (Order, error) {
 		productIds = append(productIds, productId)
 	}
 
-	order.Products = make([]Product, 0)
-	for _, productId := range productIds {
-		query = "SELECT * FROM orderservice.product WHERE product_id = ?"
-		rows, err = orderService.Database.Query(query, productId)
+	orderProducts, err := orderService.getOrderProducts(&productIds)
+	if err != nil {
+		return Order{}, err
+	}
+	order.Products = orderProducts
+	return order, nil
+}
+
+func (orderService *OrderService) UpdateOrder(orderId string, productIds *[]int) error {
+	query := "DELETE FROM orderservice.product_in_order WHERE order_id = ?"
+	_, err := orderService.Database.Exec(query, orderId)
+	if err != nil {
+		return err
+	}
+	return orderService.setOrderProducts(orderId, productIds)
+}
+
+func (orderService *OrderService) setOrderProducts(orderId string, productIds *[]int) error {
+	for _, productId := range *productIds {
+		query := "INSERT INTO orderservice.product_in_order (product_id, order_id) VALUES (?, ?)"
+		_, err := orderService.Database.Query(query, productId, orderId)
 		if err != nil {
-			return Order{}, err
+			log.WithField("create_order", "failed")
+			return err
+		}
+	}
+	return nil
+}
+
+func (orderService *OrderService) getOrderProducts(productIds *[]int) ([]Product, error) {
+	orderProducts := make([]Product, 0)
+	for _, productId := range *productIds {
+		query := "SELECT * FROM orderservice.product WHERE product_id = ?"
+		rows, err := orderService.Database.Query(query, productId)
+		if err != nil {
+			return nil, err
 		}
 
 		for rows.Next() {
 			var product Product
 			err = rows.Scan(&product.Id, &product.Name, &product.Price)
 			if err != nil {
-				return Order{}, err
+				return nil, err
 			}
-			order.Products = append(order.Products, product)
+			orderProducts = append(orderProducts, product)
 		}
 	}
 
-	return order, nil
-}
-
-func (orderService *OrderService) UpdateOrder(orderId string, productIds *[]int) error {
-	panic("implement me")
+	return orderProducts, nil
 }
