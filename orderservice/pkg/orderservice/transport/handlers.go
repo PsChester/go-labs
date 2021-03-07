@@ -2,7 +2,6 @@ package transport
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"io"
@@ -15,6 +14,10 @@ import (
 type CreateOrderRequestBody struct {
 	UserId     int   `json:"user_id"`
 	ProductIds []int `json:"product_ids"`
+}
+
+type ShowOrdersRequestBody struct {
+	UserId int `json:"user_id"`
 }
 
 func Router(orderService model.OrderServiceInterface) http.Handler {
@@ -40,9 +43,33 @@ func logMiddleware(httpHandler http.Handler) http.Handler {
 
 func ShowOrders(orderService model.OrderServiceInterface) func(http.ResponseWriter, *http.Request) {
 	return func(responseWriter http.ResponseWriter, request *http.Request) {
-		//Получение user_id
+		body, err := io.ReadAll(request.Body)
+		if err != nil {
+			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer request.Body.Close()
 
-		//orderService.GetAllOrders()
+		var message ShowOrdersRequestBody
+		err = json.Unmarshal(body, &message)
+		if err != nil {
+			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		orders, err := orderService.GetAllOrders(message.UserId)
+		if err != nil {
+			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		}
+
+		jsonAnswer, err := json.Marshal(orders)
+		if err != nil {
+			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		}
+
+		if _, err = io.WriteString(responseWriter, string(jsonAnswer)); err != nil {
+			log.WithField("getOrders", "failed") //TODO:question почему не отображается в логах?
+		}
 	}
 }
 
@@ -61,8 +88,6 @@ func CreateOrder(orderService model.OrderServiceInterface) func(http.ResponseWri
 			http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		fmt.Println(message.UserId, message.ProductIds, body)
 
 		err = orderService.CreateOrder(message.UserId, &message.ProductIds)
 		if err != nil {

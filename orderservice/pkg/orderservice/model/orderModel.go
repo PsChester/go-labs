@@ -14,7 +14,7 @@ type OrderService struct {
 // Order Answer: название структур и их полей с заглавной буквы, чтобы их можно было использовать при экспорте.
 type Order struct {
 	Id          string    `json:"id"`
-	CreatedDate int       `json:"created_date"`
+	CreatedDate time.Time `json:"created_date"`
 	Products    []Product `json:"products"`
 }
 
@@ -60,10 +60,62 @@ func (orderService *OrderService) CreateOrder(userId int, productIds *[]int) err
 }
 
 func (orderService *OrderService) GetAllOrders(userId int) ([]Order, error) {
-	panic("implement me")
-	//1. Запросить все заказы из таблицы order с соответсвующим user_id
-	//2. В цикле для каждого заказа запросить из бд список продуктов
-	//3. Вернуть массив
+	query := "SELECT order_id, created_date FROM orderservice.`order` WHERE user_id = ?"
+	rows, err := orderService.Database.Query(query, userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	orders := make([]Order, 0)
+	for rows.Next() {
+		var order Order
+		err = rows.Scan(&order.Id, &order.CreatedDate)
+		if err != nil {
+			return nil, err
+		}
+		orders = append(orders, order)
+	}
+
+	for orderIndex, order := range orders {
+		query = "SELECT product_id FROM orderservice.product_in_order WHERE order_id = ?"
+		rows, err = orderService.Database.Query(query, order.Id)
+		if err != nil {
+			return nil, err
+		}
+
+		productIds := make([]string, 0)
+		for rows.Next() {
+			var productId string
+			err = rows.Scan(&productId)
+			if err != nil {
+				return nil, err
+			}
+			productIds = append(productIds, productId)
+		}
+
+		orderProducts := make([]Product, 0)
+		for _, productId := range productIds {
+			query = "SELECT * FROM orderservice.product WHERE product_id = ?"
+			rows, err = orderService.Database.Query(query, productId)
+			if err != nil {
+				return nil, err
+			}
+
+			for rows.Next() {
+				var product Product
+				err = rows.Scan(&product.Id, &product.Name, &product.Price)
+				if err != nil {
+					return nil, err
+				}
+				orderProducts = append(orderProducts, product)
+			}
+		}
+
+		orders[orderIndex].Products = orderProducts
+	}
+
+	return orders, nil
 }
 
 func (orderService *OrderService) CancelOrder(orderId string) error {

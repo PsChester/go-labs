@@ -35,7 +35,7 @@ func main() {
 	}
 
 	//Подключение базы данных
-	database, err := sql.Open("mysql", `root:root@/orderservice`)
+	database, err := sql.Open("mysql", `root:root@/orderservice?parseTime=true`)
 	if err != nil {
 		log.Fatal(err)
 	}

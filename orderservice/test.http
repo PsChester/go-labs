@@ -1,7 +1,16 @@
+###
 POST http://localhost:8000/create_order
 Content-Type: application/json
 
 {
   "user_id": 1,
   "product_ids": [1, 2, 3]
+}
+
+###
+POST http://localhost:8000/get_orders
+Content-Type: application/json
+
+{
+  "user_id": 1
 }
