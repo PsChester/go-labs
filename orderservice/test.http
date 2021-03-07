@@ -24,9 +24,18 @@ Content-Type: application/json
 }
 
 ###
+POST http://localhost:8000/update_order
+Content-Type: application/json
+
+{
+  "order_id": "81bee33a-b758-4c7b-abcc-816855754091",
+  "product_ids": [4]
+}
+
+###
 POST http://localhost:8000/cancel_order
 Content-Type: application/json
 
 {
-  "order_id": "df766840-8f70-4fff-bce2-427b7e1a7678"
+  "order_id": "81bee33a-b758-4c7b-abcc-816855754091"
 }

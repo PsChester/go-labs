@@ -94,7 +94,7 @@ func (orderService *OrderService) GetOrder(orderId string) (Order, error) {
 	}
 	order.Id = orderId
 
-	query = "SELECT product_id FROM orderservice.product_in_order WHERE order_id = ?"
+	query = "SELECT product_id FROM orderservice.`product_in_order` WHERE order_id = ?"
 	rows, err := orderService.Database.Query(query, order.Id)
 	if err != nil {
 		return Order{}, err
@@ -119,7 +119,7 @@ func (orderService *OrderService) GetOrder(orderId string) (Order, error) {
 }
 
 func (orderService *OrderService) UpdateOrder(orderId string, productIds *[]int) error {
-	query := "DELETE FROM orderservice.product_in_order WHERE order_id = ?"
+	query := "DELETE FROM orderservice.`product_in_order` WHERE order_id = ?"
 	_, err := orderService.Database.Exec(query, orderId)
 	if err != nil {
 		return err
@@ -129,7 +129,7 @@ func (orderService *OrderService) UpdateOrder(orderId string, productIds *[]int)
 
 func (orderService *OrderService) setOrderProducts(orderId string, productIds *[]int) error {
 	for _, productId := range *productIds {
-		query := "INSERT INTO orderservice.product_in_order (product_id, order_id) VALUES (?, ?)"
+		query := "INSERT INTO orderservice.`product_in_order` (product_id, order_id) VALUES (?, ?)"
 		_, err := orderService.Database.Query(query, productId, orderId)
 		if err != nil {
 			log.WithField("create_order", "failed")
