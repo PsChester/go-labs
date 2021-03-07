@@ -26,25 +26,32 @@ type Product struct {
 
 type OrderServiceInterface interface {
 	CreateOrder(userId string, products []Product) error
-	CancelOrder(orderId string)
-	GetOrder(orderId string)
-	UpdateOrder(orderId string, products []Product)
+	CancelOrder(orderId string) error
+	GetOrder(orderId string) (Order, error)
+	UpdateOrder(orderId string, products []Product) error
 	GetAllOrders(userId string) ([]Order, error)
 }
 
 //TODO:Question Есть ли опциональный возврат? Order|nil
 func (orderService *OrderService) CreateOrder(userId string, products []Product) error {
 	orderId := uuid.New().String()
-	createOrderQuery := "INSERT INTO orderservice.order (order_id, user_id, created_date) VALUES (?, ?, ?)"
+	query := "INSERT INTO orderservice.`order` (order_id, user_id, created_date) VALUES (?, ?, ?)"
 
 	//TODO: Проверить мб нужно конвертировать time.Now() в timestamp
-	_, err := orderService.Database.Exec(createOrderQuery, orderId, userId, time.Now())
+	_, err := orderService.Database.Exec(query, orderId, userId, time.Now())
 	if err != nil {
 		log.WithField("create_order", "failed")
 		return err
 	}
 
-	//TODO: В цикле пополнить таблицу продуктами
+	for _, product := range products {
+		query = "INSERT INTO orderservice.product_in_order (product_id, order_id) VALUES (?, ?)"
+		_, err := orderService.Database.Query(query, product.Id, orderId)
+		if err != nil {
+			log.WithField("create_order", "failed")
+			return err
+		}
+	}
 
 	return nil
 }
@@ -56,13 +63,13 @@ func (orderService *OrderService) GetAllOrders(userId string) ([]Order, error) {
 	//3. Вернуть массив
 }
 
-func (orderService *OrderService) CancelOrder(orderId string) {
+func (orderService *OrderService) CancelOrder(orderId string) error {
 	panic("implement me")
 }
-func (orderService *OrderService) GetOrder(orderId string) {
+func (orderService *OrderService) GetOrder(orderId string) (Order, error) {
 	panic("implement me")
 }
 
-func (orderService *OrderService) UpdateOrder(orderId string, products []Product) {
+func (orderService *OrderService) UpdateOrder(orderId string, products []Product) error {
 	panic("implement me")
 }
